@@ -9,6 +9,7 @@ const { parseLMStudioBasePath } = require("../AiProviders/lmStudio");
 const { parseNvidiaNimBasePath } = require("../AiProviders/nvidiaNim");
 const { fetchPPIOModels } = require("../AiProviders/ppio");
 const { GeminiLLM } = require("../AiProviders/gemini");
+const { fetchAimlApiModels } = require("../AiProviders/aimlapi");
 
 const SUPPORT_CUSTOM_MODELS = [
   "openai",
@@ -33,6 +34,7 @@ const SUPPORT_CUSTOM_MODELS = [
   "gemini",
   "ppio",
   "dpais",
+  "aimlapi",
 ];
 
 async function getCustomModels(provider = "", apiKey = null, basePath = null) {
@@ -84,6 +86,8 @@ async function getCustomModels(provider = "", apiKey = null, basePath = null) {
       return await getPPIOModels(apiKey);
     case "dpais":
       return await getDellProAiStudioModels(basePath);
+    case "aimlapi":
+      return await getAimlApiModels(apiKey);
     default:
       return { models: [], error: "Invalid provider for custom models" };
   }
@@ -397,7 +401,7 @@ async function getFireworksAiModels() {
   const models = Object.values(knownModels).map((model) => {
     return {
       id: model.id,
-      organization: model.organization,
+      organization: model.developer,
       name: model.name,
     };
   });
@@ -426,7 +430,7 @@ async function getOpenRouterModels() {
   const models = Object.values(knownModels).map((model) => {
     return {
       id: model.id,
-      organization: model.organization,
+      organization: model.developer,
       name: model.name,
     };
   });
@@ -440,7 +444,7 @@ async function getNovitaModels() {
   const models = Object.values(knownModels).map((model) => {
     return {
       id: model.id,
-      organization: model.organization,
+      organization: model.developer,
       name: model.name,
     };
   });
@@ -463,7 +467,7 @@ async function getAPIPieModels(apiKey = null) {
     .map((model) => {
       return {
         id: model.id,
-        organization: model.organization,
+        organization: model.developer,
         name: model.name,
       };
     });
@@ -631,7 +635,7 @@ async function getPPIOModels() {
   const models = Object.values(ppioModels).map((model) => {
     return {
       id: model.id,
-      organization: model.organization,
+      organization: model.developer,
       name: model.name,
     };
   });
@@ -675,6 +679,25 @@ async function getDellProAiStudioModels(basePath = null) {
   }
 }
 
+async function getAimlApiModels(apiKey = null) {
+  const knownModels = await fetchAimlApiModels(apiKey);
+  if (!Object.keys(knownModels).length === 0)
+    return { models: [], error: null };
+
+  if (Object.keys(knownModels).length > 0 && !!apiKey)
+    process.env.AIML_API_KEY = apiKey;
+
+  const models = Object.values(knownModels).map((model) => {
+    return {
+      id: model.id,
+      organization: model.developer,
+      name: model.name,
+    };
+  });
+  return { models, error: null };
+}
+
 module.exports = {
   getCustomModels,
+  getAimlApiModels,
 };
