@@ -818,6 +818,7 @@ function supportedEmbeddingModel(input = "") {
     "litellm",
     "generic-openai",
     "mistral",
+    "aimlapi",
   ];
   return supported.includes(input)
     ? null
