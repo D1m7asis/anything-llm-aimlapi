@@ -33,6 +33,7 @@ const SUPPORT_CUSTOM_MODELS = [
   "gemini",
   "ppio",
   "dpais",
+  "aimlapi",
 ];
 
 async function getCustomModels(provider = "", apiKey = null, basePath = null) {
@@ -84,6 +85,8 @@ async function getCustomModels(provider = "", apiKey = null, basePath = null) {
       return await getPPIOModels(apiKey);
     case "dpais":
       return await getDellProAiStudioModels(basePath);
+    case "aimlapi":
+      return await getAimlApiModels(apiKey);
     default:
       return { models: [], error: "Invalid provider for custom models" };
   }
@@ -675,6 +678,32 @@ async function getDellProAiStudioModels(basePath = null) {
   }
 }
 
+async function getAimlApiModels(apiKey = null) {
+  const { OpenAI: OpenAIApi } = require("openai");
+  const openai = new OpenAIApi({
+    apiKey: apiKey || process.env.AIML_API_KEY,
+    baseURL: "https://api.aimlapi.com/v1",
+  });
+  const models = await openai.models
+    .list()
+    .then((results) => results.data)
+    .then((models) =>
+      models.map((model) => ({
+        id: model.id,
+        name: model.id,
+        organization: model.owned_by,
+      }))
+    )
+    .catch((e) => {
+      console.error(`AimlApi:listModels`, e.message);
+      return [];
+    });
+
+  if (models.length > 0 && !!apiKey) process.env.AIML_API_KEY = apiKey;
+  return { models, error: null };
+}
+
 module.exports = {
   getCustomModels,
+  getAimlApiModels,
 };
