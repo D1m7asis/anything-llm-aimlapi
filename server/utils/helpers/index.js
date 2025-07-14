@@ -263,6 +263,9 @@ function getEmbeddingEngineSelection() {
     case "gemini":
       const { GeminiEmbedder } = require("../EmbeddingEngines/gemini");
       return new GeminiEmbedder();
+    case "aimlapi":
+      const { AimlApiEmbedder } = require("../EmbeddingEngines/aimlapi");
+      return new AimlApiEmbedder();
     default:
       return new NativeEmbedder();
   }
