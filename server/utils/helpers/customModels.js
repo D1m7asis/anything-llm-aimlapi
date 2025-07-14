@@ -9,6 +9,7 @@ const { parseLMStudioBasePath } = require("../AiProviders/lmStudio");
 const { parseNvidiaNimBasePath } = require("../AiProviders/nvidiaNim");
 const { fetchPPIOModels } = require("../AiProviders/ppio");
 const { GeminiLLM } = require("../AiProviders/gemini");
+const { fetchAimlApiModels } = require("../AiProviders/aimlapi");
 
 const SUPPORT_CUSTOM_MODELS = [
   "openai",
@@ -400,7 +401,7 @@ async function getFireworksAiModels() {
   const models = Object.values(knownModels).map((model) => {
     return {
       id: model.id,
-      organization: model.organization,
+      organization: model.developer,
       name: model.name,
     };
   });
@@ -429,7 +430,7 @@ async function getOpenRouterModels() {
   const models = Object.values(knownModels).map((model) => {
     return {
       id: model.id,
-      organization: model.organization,
+      organization: model.developer,
       name: model.name,
     };
   });
@@ -443,7 +444,7 @@ async function getNovitaModels() {
   const models = Object.values(knownModels).map((model) => {
     return {
       id: model.id,
-      organization: model.organization,
+      organization: model.developer,
       name: model.name,
     };
   });
@@ -466,7 +467,7 @@ async function getAPIPieModels(apiKey = null) {
     .map((model) => {
       return {
         id: model.id,
-        organization: model.organization,
+        organization: model.developer,
         name: model.name,
       };
     });
@@ -634,7 +635,7 @@ async function getPPIOModels() {
   const models = Object.values(ppioModels).map((model) => {
     return {
       id: model.id,
-      organization: model.organization,
+      organization: model.developer,
       name: model.name,
     };
   });
@@ -679,27 +680,20 @@ async function getDellProAiStudioModels(basePath = null) {
 }
 
 async function getAimlApiModels(apiKey = null) {
-  const { OpenAI: OpenAIApi } = require("openai");
-  const openai = new OpenAIApi({
-    apiKey: apiKey || process.env.AIML_API_KEY,
-    baseURL: "https://api.aimlapi.com/v1",
-  });
-  const models = await openai.models
-    .list()
-    .then((results) => results.data)
-    .then((models) =>
-      models.map((model) => ({
-        id: model.id,
-        name: model.id,
-        organization: model.owned_by,
-      }))
-    )
-    .catch((e) => {
-      console.error(`AimlApi:listModels`, e.message);
-      return [];
-    });
+  const knownModels = await fetchAimlApiModels(apiKey);
+  if (!Object.keys(knownModels).length === 0)
+    return { models: [], error: null };
 
-  if (models.length > 0 && !!apiKey) process.env.AIML_API_KEY = apiKey;
+  if (Object.keys(knownModels).length > 0 && !!apiKey)
+    process.env.AIML_API_KEY = apiKey;
+
+  const models = Object.values(knownModels).map((model) => {
+    return {
+      id: model.id,
+      organization: model.developer,
+      name: model.name,
+    };
+  });
   return { models, error: null };
 }
 

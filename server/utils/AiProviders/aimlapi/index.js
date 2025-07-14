@@ -6,6 +6,15 @@ const {
   handleDefaultStreamResponseV2,
   formatChatHistory,
 } = require("../../helpers/chat/responses");
+const fs = require("fs");
+const path = require("path");
+const { safeJsonParse } = require("../../http");
+
+const cacheFolder = path.resolve(
+  process.env.STORAGE_DIR
+    ? path.resolve(process.env.STORAGE_DIR, "models", "aimlapi")
+    : path.resolve(__dirname, `../../../storage/models/aimlapi`)
+);
 
 class AimlApiLLM {
   constructor(embedder = null, modelPreference = null) {
@@ -22,6 +31,10 @@ class AimlApiLLM {
       system: this.promptWindowLimit() * 0.15,
       user: this.promptWindowLimit() * 0.7,
     };
+
+    if (!fs.existsSync(cacheFolder)) fs.mkdirSync(cacheFolder, { recursive: true });
+    this.cacheModelPath = path.resolve(cacheFolder, "models.json");
+    this.cacheAtPath = path.resolve(cacheFolder, ".cached_at");
 
     this.embedder = embedder ?? new NativeEmbedder();
     this.defaultTemp = 0.7;
@@ -46,21 +59,53 @@ class AimlApiLLM {
     );
   }
 
+  async #syncModels() {
+    if (fs.existsSync(this.cacheModelPath) && !this.#cacheIsStale()) return false;
+    this.log("Model cache is not present or stale. Fetching from AimlApi API.");
+    await fetchAimlApiModels();
+    return;
+  }
+
+  #cacheIsStale() {
+    const MAX_STALE = 6.048e8; // 1 Week in MS
+    if (!fs.existsSync(this.cacheAtPath)) return true;
+    const now = Number(new Date());
+    const timestampMs = Number(fs.readFileSync(this.cacheAtPath));
+    return now - timestampMs > MAX_STALE;
+  }
+
+  models() {
+    if (!fs.existsSync(this.cacheModelPath)) return {};
+    return safeJsonParse(
+      fs.readFileSync(this.cacheModelPath, { encoding: "utf-8" }),
+      {}
+    );
+  }
+
   streamingEnabled() {
     return "streamGetChatCompletion" in this;
   }
 
-  static promptWindowLimit() {
-    return 4096;
+  static promptWindowLimit(modelName) {
+    const cacheModelPath = path.resolve(cacheFolder, "models.json");
+    const availableModels = fs.existsSync(cacheModelPath)
+      ? safeJsonParse(
+          fs.readFileSync(cacheModelPath, { encoding: "utf-8" }),
+          {}
+        )
+      : {};
+    return availableModels[modelName]?.maxLength || 4096;
   }
 
   promptWindowLimit() {
-    return AimlApiLLM.promptWindowLimit();
+    const availableModels = this.models();
+    return availableModels[this.model]?.maxLength || 4096;
   }
 
   async isValidChatCompletionModel(modelName = "") {
-    const models = await this.openai.models.list().catch(() => ({ data: [] }));
-    return models.data.some((m) => m.id === modelName);
+    await this.#syncModels();
+    const availableModels = this.models();
+    return Object.prototype.hasOwnProperty.call(availableModels, modelName);
   }
 
   #generateContent({ userPrompt, attachments = [] }) {
@@ -166,6 +211,55 @@ class AimlApiLLM {
   }
 }
 
+async function fetchAimlApiModels(providedApiKey = null) {
+  const apiKey = providedApiKey || process.env.AIML_API_KEY || null;
+  return await fetch(`https://api.aimlapi.com/v1/models`, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}),
+    },
+  })
+    .then((res) => res.json())
+    .then(({ data = [] }) => {
+      const models = {};
+      data
+        .filter((m) => m.type === "chat-completion")
+        .forEach((model) => {
+          const developer =
+            model.info?.developer ||
+            model.provider ||
+            (model.id?.split("/")[0] || "AimlApi");
+          models[model.id] = {
+            id: model.id,
+            name: model.name || model.id,
+            developer: developer.charAt(0).toUpperCase() + developer.slice(1),
+            maxLength: model.context_length || model.max_tokens || 4096,
+          };
+        });
+
+      if (!fs.existsSync(cacheFolder))
+        fs.mkdirSync(cacheFolder, { recursive: true });
+      fs.writeFileSync(
+        path.resolve(cacheFolder, "models.json"),
+        JSON.stringify(models),
+        { encoding: "utf-8" }
+      );
+      fs.writeFileSync(
+        path.resolve(cacheFolder, ".cached_at"),
+        String(Number(new Date())),
+        { encoding: "utf-8" }
+      );
+
+      return models;
+    })
+    .catch((e) => {
+      console.error(e);
+      return {};
+    });
+}
+
 module.exports = {
   AimlApiLLM,
+  fetchAimlApiModels,
 };

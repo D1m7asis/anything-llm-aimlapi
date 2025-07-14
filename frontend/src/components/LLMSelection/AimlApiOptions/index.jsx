@@ -32,13 +32,13 @@ export default function AimlApiOptions({ settings }) {
 }
 
 function AimlApiModelSelection({ apiKey, settings }) {
-  const [models, setModels] = useState([]);
+  const [groupedModels, setGroupedModels] = useState({});
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function findCustomModels() {
       if (!apiKey) {
-        setModels([]);
+        setGroupedModels({});
         setLoading(true);
         return;
       }
@@ -48,13 +48,20 @@ function AimlApiModelSelection({ apiKey, settings }) {
         "aimlapi",
         typeof apiKey === "boolean" ? null : apiKey
       );
-      setModels(models || []);
+      if (models?.length > 0) {
+        const byDev = models.reduce((acc, model) => {
+          acc[model.organization] = acc[model.organization] || [];
+          acc[model.organization].push(model);
+          return acc;
+        }, {});
+        setGroupedModels(byDev);
+      }
       setLoading(false);
     }
     findCustomModels();
   }, [apiKey]);
 
-  if (loading) {
+  if (loading || Object.keys(groupedModels).length === 0) {
     return (
       <div className="flex flex-col w-60">
         <label className="text-white text-sm font-semibold block mb-3">
@@ -83,15 +90,21 @@ function AimlApiModelSelection({ apiKey, settings }) {
         required={true}
         className="border-none bg-theme-settings-input-bg border-gray-500 text-white text-sm rounded-lg block w-full p-2.5"
       >
-        {models.map((model) => (
-          <option
-            key={model.id}
-            value={model.id}
-            selected={settings?.AimlModelPref === model.id}
-          >
-            {model.name}
-          </option>
-        ))}
+        {Object.keys(groupedModels)
+          .sort()
+          .map((organization) => (
+            <optgroup key={organization} label={organization}>
+              {groupedModels[organization].map((model) => (
+                <option
+                  key={model.id}
+                  value={model.id}
+                  selected={settings?.AimlModelPref === model.id}
+                >
+                  {model.name}
+                </option>
+              ))}
+            </optgroup>
+          ))}
       </select>
     </div>
   );
