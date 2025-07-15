@@ -1,5 +1,8 @@
 const OpenAI = require("openai");
-const { AIMLAPI_HEADERS } = require("../../AiProviders/aimlapi");
+const {
+  AIMLAPI_HEADERS,
+  AIMLAPI_BASE_URL,
+} = require("../../AiProviders/aimlapi");
 const Provider = require("./ai-provider.js");
 const InheritMultiple = require("./helpers/classes.js");
 const UnTooled = require("./helpers/untooled.js");
@@ -11,7 +14,7 @@ class AimlApiProvider extends InheritMultiple([Provider, UnTooled]) {
     super();
     const { model = "gpt-3.5-turbo" } = config;
     const client = new OpenAI({
-      baseURL: "https://api.aimlapi.com/v1",
+      baseURL: AIMLAPI_BASE_URL,
       apiKey: process.env.AIML_API_KEY ?? null,
       maxRetries: 3,
       defaultHeaders: AIMLAPI_HEADERS,
