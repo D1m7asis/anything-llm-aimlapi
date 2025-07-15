@@ -10,6 +10,7 @@ const fs = require("fs");
 const path = require("path");
 const { safeJsonParse } = require("../../http");
 
+const AIMLAPI_BASE_URL = "https://api.aimlapi.com/v1";
 const AIMLAPI_HEADERS = {
   "HTTP-Referer": "https://anythingllm.com/",
   "X-Title": "anything",
@@ -28,7 +29,7 @@ class AimlApiLLM {
     const { OpenAI: OpenAIApi } = require("openai");
     this.openai = new OpenAIApi({
       apiKey: process.env.AIML_API_KEY,
-      baseURL: "https://api.aimlapi.com/v1",
+      baseURL: AIMLAPI_BASE_URL,
       defaultHeaders: AIMLAPI_HEADERS,
     });
     this.model =
@@ -39,14 +40,15 @@ class AimlApiLLM {
       user: this.promptWindowLimit() * 0.7,
     };
 
-    if (!fs.existsSync(cacheFolder)) fs.mkdirSync(cacheFolder, { recursive: true });
+    if (!fs.existsSync(cacheFolder))
+      fs.mkdirSync(cacheFolder, { recursive: true });
     this.cacheModelPath = path.resolve(cacheFolder, "models.json");
     this.cacheAtPath = path.resolve(cacheFolder, ".cached_at");
 
     this.embedder = embedder ?? new NativeEmbedder();
     this.defaultTemp = 0.7;
     this.log(
-      `Initialized ${this.model} with context window ${this.promptWindowLimit()}`,
+      `Initialized ${this.model} with context window ${this.promptWindowLimit()}`
     );
   }
 
@@ -67,7 +69,8 @@ class AimlApiLLM {
   }
 
   async #syncModels() {
-    if (fs.existsSync(this.cacheModelPath) && !this.#cacheIsStale()) return false;
+    if (fs.existsSync(this.cacheModelPath) && !this.#cacheIsStale())
+      return false;
     this.log("Model cache is not present or stale. Fetching from AimlApi API.");
     await fetchAimlApiModels();
     return;
@@ -220,7 +223,7 @@ class AimlApiLLM {
 
 async function fetchAimlApiModels(providedApiKey = null) {
   const apiKey = providedApiKey || process.env.AIML_API_KEY || null;
-  return await fetch(`https://api.aimlapi.com/v1/models`, {
+  return await fetch(`${AIMLAPI_BASE_URL}/models`, {
     method: "GET",
     headers: {
       "Content-Type": "application/json",
@@ -237,7 +240,8 @@ async function fetchAimlApiModels(providedApiKey = null) {
           const developer =
             model.info?.developer ||
             model.provider ||
-            (model.id?.split("/")[0] || "AimlApi");
+            model.id?.split("/")[0] ||
+            "AimlApi";
           models[model.id] = {
             id: model.id,
             name: model.name || model.id,
@@ -269,7 +273,7 @@ async function fetchAimlApiModels(providedApiKey = null) {
 
 async function fetchAimlApiEmbeddingModels(providedApiKey = null) {
   const apiKey = providedApiKey || process.env.AIML_API_KEY || null;
-  return await fetch(`https://api.aimlapi.com/v1/models`, {
+  return await fetch(`${AIMLAPI_BASE_URL}/models`, {
     method: "GET",
     headers: {
       "Content-Type": "application/json",
@@ -286,7 +290,8 @@ async function fetchAimlApiEmbeddingModels(providedApiKey = null) {
           const developer =
             model.info?.developer ||
             model.provider ||
-            (model.id?.split("/")[0] || "AimlApi");
+            model.id?.split("/")[0] ||
+            "AimlApi";
           models[model.id] = {
             id: model.id,
             name: model.name || model.id,
@@ -321,4 +326,5 @@ module.exports = {
   fetchAimlApiModels,
   fetchAimlApiEmbeddingModels,
   AIMLAPI_HEADERS,
+  AIMLAPI_BASE_URL,
 };
