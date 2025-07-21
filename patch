@@ -1,0 +1,1283 @@
+diff --git a/docker/.env.example b/docker/.env.example
+index b4abe88a361e74d9db380efb89aad533e7e1d10a..b8e6676959d53ced1d89be195bc8c8e2d668c5a2 100644
+--- a/docker/.env.example
++++ b/docker/.env.example
+@@ -108,51 +108,51 @@ GID='1000'
+ # AWS_BEDROCK_LLM_CONNECTION_METHOD=iam
+ # AWS_BEDROCK_LLM_MAX_OUTPUT_TOKENS=4096
+ # AWS_BEDROCK_LLM_SESSION_TOKEN= # Only required if CONNECTION_METHOD is 'sessionToken'
+
+ # LLM_PROVIDER='fireworksai'
+ # FIREWORKS_AI_LLM_API_KEY='my-fireworks-ai-key'
+ # FIREWORKS_AI_LLM_MODEL_PREF='accounts/fireworks/models/llama-v3p1-8b-instruct'
+
+ # LLM_PROVIDER='apipie'
+ # APIPIE_LLM_API_KEY='sk-123abc'
+ # APIPIE_LLM_MODEL_PREF='openrouter/llama-3.1-8b-instruct'
+
+ # LLM_PROVIDER='xai'
+ # XAI_LLM_API_KEY='xai-your-api-key-here'
+ # XAI_LLM_MODEL_PREF='grok-beta'
+
+ # LLM_PROVIDER='nvidia-nim'
+ # NVIDIA_NIM_LLM_BASE_PATH='http://127.0.0.1:8000'
+ # NVIDIA_NIM_LLM_MODEL_PREF='meta/llama-3.2-3b-instruct'
+
+ # LLM_PROVIDER='deepseek'
+ # DEEPSEEK_API_KEY='your-deepseek-api-key-here'
+ # DEEPSEEK_MODEL_PREF='deepseek-chat'
+
+ # LLM_PROVIDER='aimlapi'
+-# AIML_API_KEY='your-aimlapi-key'
++# AIML_LLM_API_KEY='your-aimlapi-key'
+ # AIML_MODEL_PREF='gpt-3.5-turbo'
+
+ # LLM_PROVIDER='ppio'
+ # PPIO_API_KEY='your-ppio-api-key-here'
+ # PPIO_MODEL_PREF=deepseek/deepseek-v3/community
+
+ ###########################################
+ ######## Embedding API SElECTION ##########
+ ###########################################
+ # Only used if you are using an LLM that does not natively support embedding (openai or Azure)
+ # EMBEDDING_ENGINE='openai'
+ # OPEN_AI_KEY=sk-xxxx
+ # EMBEDDING_MODEL_PREF='text-embedding-ada-002'
+
+ # EMBEDDING_ENGINE='azure'
+ # AZURE_OPENAI_ENDPOINT=
+ # AZURE_OPENAI_KEY=
+ # EMBEDDING_MODEL_PREF='my-embedder-model' # This is the "deployment" on Azure you want to use for embeddings. Not the base model. Valid base model is text-embedding-ada-002
+
+ # EMBEDDING_ENGINE='localai'
+ # EMBEDDING_BASE_PATH='http://localhost:8080/v1'
+ # EMBEDDING_MODEL_PREF='text-embedding-ada-002'
+ # EMBEDDING_MODEL_MAX_CHUNK_LENGTH=1000 # The max chunk size in chars a string to embed can be
+
+ # EMBEDDING_ENGINE='ollama'
+@@ -165,51 +165,51 @@ GID='1000'
+ # EMBEDDING_MODEL_PREF='nomic-ai/nomic-embed-text-v1.5-GGUF/nomic-embed-text-v1.5.Q4_0.gguf'
+ # EMBEDDING_MODEL_MAX_CHUNK_LENGTH=8192
+
+ # EMBEDDING_ENGINE='cohere'
+ # COHERE_API_KEY=
+ # EMBEDDING_MODEL_PREF='embed-english-v3.0'
+
+ # EMBEDDING_ENGINE='voyageai'
+ # VOYAGEAI_API_KEY=
+ # EMBEDDING_MODEL_PREF='voyage-large-2-instruct'
+
+ # EMBEDDING_ENGINE='litellm'
+ # EMBEDDING_MODEL_PREF='text-embedding-ada-002'
+ # EMBEDDING_MODEL_MAX_CHUNK_LENGTH=8192
+ # LITE_LLM_BASE_PATH='http://127.0.0.1:4000'
+ # LITE_LLM_API_KEY='sk-123abc'
+
+ # EMBEDDING_ENGINE='generic-openai'
+ # EMBEDDING_MODEL_PREF='text-embedding-ada-002'
+ # EMBEDDING_MODEL_MAX_CHUNK_LENGTH=8192
+ # EMBEDDING_BASE_PATH='http://127.0.0.1:4000'
+ # GENERIC_OPEN_AI_EMBEDDING_API_KEY='sk-123abc'
+ # GENERIC_OPEN_AI_EMBEDDING_MAX_CONCURRENT_CHUNKS=500
+
+ # EMBEDDING_ENGINE='aimlapi'
+-# AIML_API_KEY='your-aimlapi-key'
++# AIML_EMBEDDER_API_KEY='your-aimlapi-key'
+ # EMBEDDING_MODEL_PREF='text-embedding-ada-002'
+
+ # EMBEDDING_ENGINE='gemini'
+ # GEMINI_EMBEDDING_API_KEY=
+ # EMBEDDING_MODEL_PREF='text-embedding-004'
+
+ ###########################################
+ ######## Vector Database Selection ########
+ ###########################################
+ # Enable all below if you are using vector database: LanceDB.
+ # VECTOR_DB="lancedb"
+
+ # Enable all below if you are using vector database: Weaviate.
+ # VECTOR_DB="pgvector"
+ # PGVECTOR_CONNECTION_STRING="postgresql://dbuser:dbuserpass@localhost:5432/yourdb"
+ # PGVECTOR_TABLE_NAME="anythingllm_vectors" # optional, but can be defined
+
+ # Enable all below if you are using vector database: Chroma.
+ # VECTOR_DB="chroma"
+ # CHROMA_ENDPOINT='http://host.docker.internal:8000'
+ # CHROMA_API_HEADER="X-Api-Key"
+ # CHROMA_API_KEY="sk-123abc"
+
+ # Enable all below if you are using vector database: Pinecone.
+ # VECTOR_DB="pinecone"
+diff --git a/frontend/src/components/EmbeddingSelection/AimlApiOptions/index.jsx b/frontend/src/components/EmbeddingSelection/AimlApiOptions/index.jsx
+index 47916c5fde4a0930218d370aa70fcca0276c1993..18ed62be566327a88118a4ce84092d7b76603107 100644
+--- a/frontend/src/components/EmbeddingSelection/AimlApiOptions/index.jsx
++++ b/frontend/src/components/EmbeddingSelection/AimlApiOptions/index.jsx
+@@ -1,45 +1,45 @@
+ import { useState, useEffect } from "react";
+ import System from "@/models/system";
+
+ export default function AimlApiOptions({ settings }) {
+-  const [inputValue, setInputValue] = useState(settings?.AimlApiKey);
+-  const [apiKey, setApiKey] = useState(settings?.AimlApiKey);
++  const [inputValue, setInputValue] = useState(settings?.AimlEmbedderApiKey);
++  const [apiKey, setApiKey] = useState(settings?.AimlEmbedderApiKey);
+
+   return (
+     <div className="w-full flex flex-col gap-y-4">
+       <div className="w-full flex items-center gap-[36px] mt-1.5">
+         <div className="flex flex-col w-60">
+           <label className="text-white text-sm font-semibold block mb-3">
+             API Key
+           </label>
+           <input
+             type="password"
+-            name="AimlApiKey"
++            name="AimlEmbedderApiKey"
+             className="border-none bg-theme-settings-input-bg text-white placeholder:text-theme-settings-input-placeholder text-sm rounded-lg focus:outline-primary-button active:outline-primary-button outline-none block w-full p-2.5"
+             placeholder="AI/ML API Key"
+-            defaultValue={settings?.AimlApiKey ? "*".repeat(20) : ""}
++            defaultValue={settings?.AimlEmbedderApiKey ? "*".repeat(20) : ""}
+             required={true}
+             autoComplete="off"
+             spellCheck={false}
+             onChange={(e) => setInputValue(e.target.value)}
+             onBlur={() => setApiKey(inputValue)}
+           />
+         </div>
+         <AimlApiEmbeddingModelSelection apiKey={apiKey} settings={settings} />
+       </div>
+     </div>
+   );
+ }
+
+ function AimlApiEmbeddingModelSelection({ apiKey, settings }) {
+   const [groupedModels, setGroupedModels] = useState({});
+   const [loading, setLoading] = useState(true);
+
+   useEffect(() => {
+     async function findModels() {
+       if (!apiKey) {
+         setGroupedModels({});
+         setLoading(true);
+         return;
+       }
+       setLoading(true);
+diff --git a/frontend/src/components/LLMSelection/AimlApiOptions/index.jsx b/frontend/src/components/LLMSelection/AimlApiOptions/index.jsx
+index 75d18b6cc5e91c9f4884a94931594a0de8b2b5e1..86c400c91f31620e27f2e4435b532bc8b38492a1 100644
+--- a/frontend/src/components/LLMSelection/AimlApiOptions/index.jsx
++++ b/frontend/src/components/LLMSelection/AimlApiOptions/index.jsx
+@@ -1,44 +1,44 @@
+ import { useState, useEffect } from "react";
+ import System from "@/models/system";
+
+ export default function AimlApiOptions({ settings }) {
+-  const [inputValue, setInputValue] = useState(settings?.AimlApiKey);
+-  const [apiKey, setApiKey] = useState(settings?.AimlApiKey);
++  const [inputValue, setInputValue] = useState(settings?.AimlLlmApiKey);
++  const [apiKey, setApiKey] = useState(settings?.AimlLlmApiKey);
+
+   return (
+     <div className="flex gap-[36px] mt-1.5">
+       <div className="flex flex-col w-60">
+         <label className="text-white text-sm font-semibold block mb-3">
+           API Key
+         </label>
+         <input
+           type="password"
+-          name="AimlApiKey"
++          name="AimlLlmApiKey"
+           className="border-none bg-theme-settings-input-bg text-white placeholder:text-theme-settings-input-placeholder text-sm rounded-lg focus:outline-primary-button active:outline-primary-button outline-none block w-full p-2.5"
+           placeholder="AI/ML API Key"
+-          defaultValue={settings?.AimlApiKey ? "*".repeat(20) : ""}
++          defaultValue={settings?.AimlLlmApiKey ? "*".repeat(20) : ""}
+           required={true}
+           autoComplete="off"
+           spellCheck={false}
+           onChange={(e) => setInputValue(e.target.value)}
+           onBlur={() => setApiKey(inputValue)}
+         />
+       </div>
+       {!settings?.credentialsOnly && (
+         <AimlApiModelSelection settings={settings} apiKey={apiKey} />
+       )}
+     </div>
+   );
+ }
+
+ function AimlApiModelSelection({ apiKey, settings }) {
+   const [groupedModels, setGroupedModels] = useState({});
+   const [loading, setLoading] = useState(true);
+
+   useEffect(() => {
+     async function findCustomModels() {
+       if (!apiKey) {
+         setGroupedModels({});
+         setLoading(true);
+         return;
+       }
+diff --git a/frontend/src/pages/GeneralSettings/LLMPreference/index.jsx b/frontend/src/pages/GeneralSettings/LLMPreference/index.jsx
+index b10c0f4a07749053350d4e82b3c48bf215427776..7e0013f89fd431df90aa288d67ba0204e6bc0219 100644
+--- a/frontend/src/pages/GeneralSettings/LLMPreference/index.jsx
++++ b/frontend/src/pages/GeneralSettings/LLMPreference/index.jsx
+@@ -249,51 +249,51 @@ export const AVAILABLE_LLM_PROVIDERS = [
+     description: "Run Cohere's powerful Command models.",
+     requiredConfig: ["CohereApiKey"],
+   },
+   {
+     name: "LiteLLM",
+     value: "litellm",
+     logo: LiteLLMLogo,
+     options: (settings) => <LiteLLMOptions settings={settings} />,
+     description: "Run LiteLLM's OpenAI compatible proxy for various LLMs.",
+     requiredConfig: ["LiteLLMBasePath"],
+   },
+   {
+     name: "DeepSeek",
+     value: "deepseek",
+     logo: DeepSeekLogo,
+     options: (settings) => <DeepSeekOptions settings={settings} />,
+     description: "Run DeepSeek's powerful LLMs.",
+     requiredConfig: ["DeepSeekApiKey"],
+   },
+   {
+     name: "AI/ML API",
+     value: "aimlapi",
+     logo: AimlApiLogo,
+     options: (settings) => <AimlApiOptions settings={settings} />,
+     description: "Access 300+ AI models with enterprise uptime.",
+-    requiredConfig: ["AimlApiKey"],
++    requiredConfig: ["AimlLlmApiKey"],
+   },
+   {
+     name: "PPIO",
+     value: "ppio",
+     logo: PPIOLogo,
+     options: (settings) => <PPIOLLMOptions settings={settings} />,
+     description:
+       "Run stable and cost-efficient open-source LLM APIs, such as DeepSeek, Llama, Qwen etc.",
+     requiredConfig: ["PPIOApiKey"],
+   },
+   {
+     name: "AWS Bedrock",
+     value: "bedrock",
+     logo: AWSBedrockLogo,
+     options: (settings) => <AWSBedrockLLMOptions settings={settings} />,
+     description: "Run powerful foundation models privately with AWS Bedrock.",
+     requiredConfig: [
+       "AwsBedrockLLMAccessKeyId",
+       "AwsBedrockLLMAccessKey",
+       "AwsBedrockLLMRegion",
+       "AwsBedrockLLMModel",
+     ],
+   },
+   {
+     name: "APIpie",
+diff --git a/frontend/src/pages/OnboardingFlow/Steps/DataHandling/index.jsx b/frontend/src/pages/OnboardingFlow/Steps/DataHandling/index.jsx
+index dca2082575119f862baf6766e1d0577dc72c42b9..4b6e819dd810261eda8dc9fd5d5aa6448a415f0a 100644
+--- a/frontend/src/pages/OnboardingFlow/Steps/DataHandling/index.jsx
++++ b/frontend/src/pages/OnboardingFlow/Steps/DataHandling/index.jsx
+@@ -366,50 +366,58 @@ export const EMBEDDING_ENGINE_PRIVACY = {
+       "Your document text is embedded privately on the server running LMStudio",
+     ],
+     logo: LMStudioLogo,
+   },
+   cohere: {
+     name: "Cohere",
+     description: [
+       "Data is shared according to the terms of service of cohere.com and your localities privacy laws.",
+     ],
+     logo: CohereLogo,
+   },
+   voyageai: {
+     name: "Voyage AI",
+     description: [
+       "Data sent to Voyage AI's servers is shared according to the terms of service of voyageai.com.",
+     ],
+     logo: VoyageAiLogo,
+   },
+   mistral: {
+     name: "Mistral AI",
+     description: [
+       "Data sent to Mistral AI's servers is shared according to the terms of service of https://mistral.ai.",
+     ],
+     logo: MistralLogo,
+   },
++  aimlapi: {
++    name: "AI/ML API",
++    description: [
++      "Your document text is visible to AI/ML API",
++      "Your documents are not used for training",
++    ],
++    logo: AimlApiLogo,
++  },
+   litellm: {
+     name: "LiteLLM",
+     description: [
+       "Your document text is only accessible on the server running LiteLLM and to the providers you configured in LiteLLM.",
+     ],
+     logo: LiteLLMLogo,
+   },
+   "generic-openai": {
+     name: "Generic OpenAI compatible service",
+     description: [
+       "Data is shared according to the terms of service applicable with your generic endpoint provider.",
+     ],
+     logo: GenericOpenAiLogo,
+   },
+   gemini: {
+     name: "Google Gemini",
+     description: [
+       "Your document text is sent to Google Gemini's servers for processing",
+       "Your document text is stored or managed according to the terms of service of Google Gemini API Terms of Service",
+     ],
+     logo: GeminiLogo,
+   },
+ };
+
+ export const FALLBACKS = {
+diff --git a/server/.env.example b/server/.env.example
+index 674b58bef6ad073b8b8b09647f848afb7282c025..19d4756076f55be7055456dadefbb3c6e10bd68f 100644
+--- a/server/.env.example
++++ b/server/.env.example
+@@ -36,51 +36,51 @@ SIG_SALT='salt' # Please generate random string at least 32 chars long.
+ # LOCAL_AI_API_KEY="sk-123abc"
+
+ # LLM_PROVIDER='ollama'
+ # OLLAMA_BASE_PATH='http://host.docker.internal:11434'
+ # OLLAMA_MODEL_PREF='llama2'
+ # OLLAMA_MODEL_TOKEN_LIMIT=4096
+ # OLLAMA_AUTH_TOKEN='your-ollama-auth-token-here (optional, only for ollama running behind auth - Bearer token)'
+
+ # LLM_PROVIDER='togetherai'
+ # TOGETHER_AI_API_KEY='my-together-ai-key'
+ # TOGETHER_AI_MODEL_PREF='mistralai/Mixtral-8x7B-Instruct-v0.1'
+
+ # LLM_PROVIDER='fireworksai'
+ # FIREWORKS_AI_LLM_API_KEY='my-fireworks-ai-key'
+ # FIREWORKS_AI_LLM_MODEL_PREF='accounts/fireworks/models/llama-v3p1-8b-instruct'
+
+ # LLM_PROVIDER='perplexity'
+ # PERPLEXITY_API_KEY='my-perplexity-key'
+ # PERPLEXITY_MODEL_PREF='codellama-34b-instruct'
+
+ # LLM_PROVIDER='deepseek'
+ # DEEPSEEK_API_KEY=YOUR_API_KEY
+ # DEEPSEEK_MODEL_PREF='deepseek-chat'
+
+ # LLM_PROVIDER='aimlapi'
+-# AIML_API_KEY='your-aimlapi-key'
++# AIML_LLM_API_KEY='your-aimlapi-key'
+ # AIML_MODEL_PREF='gpt-3.5-turbo'
+
+ # LLM_PROVIDER='openrouter'
+ # OPENROUTER_API_KEY='my-openrouter-key'
+ # OPENROUTER_MODEL_PREF='openrouter/auto'
+
+ # LLM_PROVIDER='mistral'
+ # MISTRAL_API_KEY='example-mistral-ai-api-key'
+ # MISTRAL_MODEL_PREF='mistral-tiny'
+
+ # LLM_PROVIDER='huggingface'
+ # HUGGING_FACE_LLM_ENDPOINT=https://uuid-here.us-east-1.aws.endpoints.huggingface.cloud
+ # HUGGING_FACE_LLM_API_KEY=hf_xxxxxx
+ # HUGGING_FACE_LLM_TOKEN_LIMIT=8000
+
+ # LLM_PROVIDER='groq'
+ # GROQ_API_KEY=gsk_abcxyz
+ # GROQ_MODEL_PREF=llama3-8b-8192
+
+ # LLM_PROVIDER='koboldcpp'
+ # KOBOLD_CPP_BASE_PATH='http://127.0.0.1:5000/v1'
+ # KOBOLD_CPP_MODEL_PREF='koboldcpp/codellama-7b-instruct.Q4_K_S'
+ # KOBOLD_CPP_MODEL_TOKEN_LIMIT=4096
+ # KOBOLD_CPP_MAX_TOKENS=2048
+
+@@ -163,51 +163,51 @@ SIG_SALT='salt' # Please generate random string at least 32 chars long.
+ # EMBEDDING_MODEL_PREF='nomic-ai/nomic-embed-text-v1.5-GGUF/nomic-embed-text-v1.5.Q4_0.gguf'
+ # EMBEDDING_MODEL_MAX_CHUNK_LENGTH=8192
+
+ # EMBEDDING_ENGINE='cohere'
+ # COHERE_API_KEY=
+ # EMBEDDING_MODEL_PREF='embed-english-v3.0'
+
+ # EMBEDDING_ENGINE='voyageai'
+ # VOYAGEAI_API_KEY=
+ # EMBEDDING_MODEL_PREF='voyage-large-2-instruct'
+
+ # EMBEDDING_ENGINE='litellm'
+ # EMBEDDING_MODEL_PREF='text-embedding-ada-002'
+ # EMBEDDING_MODEL_MAX_CHUNK_LENGTH=8192
+ # LITE_LLM_BASE_PATH='http://127.0.0.1:4000'
+ # LITE_LLM_API_KEY='sk-123abc'
+
+ # EMBEDDING_ENGINE='generic-openai'
+ # EMBEDDING_MODEL_PREF='text-embedding-ada-002'
+ # EMBEDDING_MODEL_MAX_CHUNK_LENGTH=8192
+ # EMBEDDING_BASE_PATH='http://127.0.0.1:4000'
+ # GENERIC_OPEN_AI_EMBEDDING_API_KEY='sk-123abc'
+ # GENERIC_OPEN_AI_EMBEDDING_MAX_CONCURRENT_CHUNKS=500
+
+ # EMBEDDING_ENGINE='aimlapi'
+-# AIML_API_KEY='your-aimlapi-key'
++# AIML_EMBEDDER_API_KEY='your-aimlapi-key'
+ # EMBEDDING_MODEL_PREF='text-embedding-ada-002'
+
+ # EMBEDDING_ENGINE='gemini'
+ # GEMINI_EMBEDDING_API_KEY=
+ # EMBEDDING_MODEL_PREF='text-embedding-004'
+
+ ###########################################
+ ######## Vector Database Selection ########
+ ###########################################
+ # Enable all below if you are using vector database: Chroma.
+ # VECTOR_DB="chroma"
+ # CHROMA_ENDPOINT='http://localhost:8000'
+ # CHROMA_API_HEADER="X-Api-Key"
+ # CHROMA_API_KEY="sk-123abc"
+
+ # Enable all below if you are using vector database: Pinecone.
+ # VECTOR_DB="pinecone"
+ # PINECONE_API_KEY=
+ # PINECONE_INDEX=
+
+ # Enable all below if you are using vector database: Astra DB.
+ # VECTOR_DB="astra"
+ # ASTRA_DB_APPLICATION_TOKEN=
+ # ASTRA_DB_ENDPOINT=
+
+diff --git a/server/models/systemSettings.js b/server/models/systemSettings.js
+index 3307c30c127d025718912c1896664fd44a994a29..73ac6674d82bd2987ccb5409da2b9bd56ea17d4c 100644
+--- a/server/models/systemSettings.js
++++ b/server/models/systemSettings.js
+@@ -199,50 +199,51 @@ const SystemSettings = {
+       // General Settings
+       // --------------------------------------------------------
+       RequiresAuth: !!process.env.AUTH_TOKEN,
+       AuthToken: !!process.env.AUTH_TOKEN,
+       JWTSecret: !!process.env.JWT_SECRET,
+       StorageDir: process.env.STORAGE_DIR,
+       MultiUserMode: await this.isMultiUserMode(),
+       DisableTelemetry: process.env.DISABLE_TELEMETRY || "false",
+
+       // --------------------------------------------------------
+       // Embedder Provider Selection Settings & Configs
+       // --------------------------------------------------------
+       EmbeddingEngine: process.env.EMBEDDING_ENGINE,
+       HasExistingEmbeddings: await this.hasEmbeddings(), // check if they have any currently embedded documents active in workspaces.
+       HasCachedEmbeddings: hasVectorCachedFiles(), // check if they any currently cached embedded docs.
+       EmbeddingBasePath: process.env.EMBEDDING_BASE_PATH,
+       EmbeddingModelPref: process.env.EMBEDDING_MODEL_PREF,
+       EmbeddingModelMaxChunkLength:
+         process.env.EMBEDDING_MODEL_MAX_CHUNK_LENGTH,
+       VoyageAiApiKey: !!process.env.VOYAGEAI_API_KEY,
+       GenericOpenAiEmbeddingApiKey:
+         !!process.env.GENERIC_OPEN_AI_EMBEDDING_API_KEY,
+       GenericOpenAiEmbeddingMaxConcurrentChunks:
+         process.env.GENERIC_OPEN_AI_EMBEDDING_MAX_CONCURRENT_CHUNKS || 500,
+       GeminiEmbeddingApiKey: !!process.env.GEMINI_EMBEDDING_API_KEY,
++      AimlEmbedderApiKey: !!process.env.AIML_EMBEDDER_API_KEY,
+
+       // --------------------------------------------------------
+       // VectorDB Provider Selection Settings & Configs
+       // --------------------------------------------------------
+       VectorDB: vectorDB,
+       ...this.vectorDBPreferenceKeys(),
+
+       // --------------------------------------------------------
+       // LLM Provider Selection Settings & Configs
+       // --------------------------------------------------------
+       LLMProvider: llmProvider,
+       LLMModel: getBaseLLMProviderModel({ provider: llmProvider }) || null,
+       ...this.llmPreferenceKeys(),
+
+       // --------------------------------------------------------
+       // Whisper (Audio transcription) Selection Settings & Configs
+       // - Currently the only 3rd party is OpenAI, so is OPEN_AI_KEY is set
+       // - then it can be shared.
+       // --------------------------------------------------------
+       WhisperProvider: process.env.WHISPER_PROVIDER || "local",
+       WhisperModelPref:
+         process.env.WHISPER_MODEL_PREF || "Xenova/whisper-small",
+
+       // --------------------------------------------------------
+       // TTS/STT  Selection Settings & Configs
+@@ -567,51 +568,51 @@ const SystemSettings = {
+       CohereApiKey: !!process.env.COHERE_API_KEY,
+       CohereModelPref: process.env.COHERE_MODEL_PREF,
+
+       // DeepSeek API Keys
+       DeepSeekApiKey: !!process.env.DEEPSEEK_API_KEY,
+       DeepSeekModelPref: process.env.DEEPSEEK_MODEL_PREF,
+
+       // APIPie LLM API Keys
+       ApipieLLMApiKey: !!process.env.APIPIE_LLM_API_KEY,
+       ApipieLLMModelPref: process.env.APIPIE_LLM_MODEL_PREF,
+
+       // xAI LLM API Keys
+       XAIApiKey: !!process.env.XAI_LLM_API_KEY,
+       XAIModelPref: process.env.XAI_LLM_MODEL_PREF,
+
+       // NVIDIA NIM Keys
+       NvidiaNimLLMBasePath: process.env.NVIDIA_NIM_LLM_BASE_PATH,
+       NvidiaNimLLMModelPref: process.env.NVIDIA_NIM_LLM_MODEL_PREF,
+       NvidiaNimLLMTokenLimit: process.env.NVIDIA_NIM_LLM_MODEL_TOKEN_LIMIT,
+
+       // PPIO API keys
+       PPIOApiKey: !!process.env.PPIO_API_KEY,
+       PPIOModelPref: process.env.PPIO_MODEL_PREF,
+
+       // AI/ML API Keys
+-      AimlApiKey: !!process.env.AIML_API_KEY,
++      AimlLlmApiKey: !!process.env.AIML_LLM_API_KEY,
+       AimlModelPref: process.env.AIML_MODEL_PREF,
+
+       // Dell Pro AI Studio Keys
+       DellProAiStudioBasePath: process.env.DPAIS_LLM_BASE_PATH,
+       DellProAiStudioModelPref: process.env.DPAIS_LLM_MODEL_PREF,
+       DellProAiStudioTokenLimit:
+         process.env.DPAIS_LLM_MODEL_TOKEN_LIMIT ?? 4096,
+     };
+   },
+
+   // For special retrieval of a key setting that does not expose any credential information
+   brief: {
+     agent_sql_connections: async function () {
+       const setting = await SystemSettings.get({
+         label: "agent_sql_connections",
+       });
+       if (!setting) return [];
+       return safeJsonParse(setting.value, []).map((dbConfig) => {
+         const { connectionString, ...rest } = dbConfig;
+         return rest;
+       });
+     },
+   },
+   getFeatureFlags: async function () {
+     return {
+diff --git a/server/utils/AiProviders/aimlapi/index.js b/server/utils/AiProviders/aimlapi/index.js
+index d02ac302ba84827efb6295023ba5205782d0ab45..29a4e98a40f0bdf6b984a5fac8b8f94f7bc505df 100644
+--- a/server/utils/AiProviders/aimlapi/index.js
++++ b/server/utils/AiProviders/aimlapi/index.js
+@@ -1,58 +1,58 @@
+ const { NativeEmbedder } = require("../../EmbeddingEngines/native");
+ const {
+   LLMPerformanceMonitor,
+ } = require("../../helpers/chat/LLMPerformanceMonitor");
+ const {
+   handleDefaultStreamResponseV2,
+   formatChatHistory,
+ } = require("../../helpers/chat/responses");
+ const fs = require("fs");
+ const path = require("path");
+ const { safeJsonParse } = require("../../http");
+
+-const AIMLAPI_BASE_URL = "https://api.aimlapi.com/v1";
+-const AIMLAPI_HEADERS = {
+-  "HTTP-Referer": "https://anythingllm.com/",
+-  "X-Title": "anything",
+-};
+-
+ const cacheFolder = path.resolve(
+   process.env.STORAGE_DIR
+     ? path.resolve(process.env.STORAGE_DIR, "models", "aimlapi")
+     : path.resolve(__dirname, `../../../storage/models/aimlapi`)
+ );
+ const embedCacheFolder = path.resolve(cacheFolder, "embeddings");
+
+ class AimlApiLLM {
++  static BASE_URL = "https://api.aimlapi.com/v1";
++  static HEADERS = {
++    "HTTP-Referer": "https://anythingllm.com/",
++    "X-Title": "anything",
++  };
+   constructor(embedder = null, modelPreference = null) {
+-    if (!process.env.AIML_API_KEY) throw new Error("No AI/ML API key was set.");
++    if (!process.env.AIML_LLM_API_KEY)
++      throw new Error("No AI/ML API key was set.");
+     const { OpenAI: OpenAIApi } = require("openai");
+     this.openai = new OpenAIApi({
+-      apiKey: process.env.AIML_API_KEY,
+-      baseURL: AIMLAPI_BASE_URL,
+-      defaultHeaders: AIMLAPI_HEADERS,
++      apiKey: process.env.AIML_LLM_API_KEY,
++      baseURL: AimlApiLLM.BASE_URL,
++      defaultHeaders: AimlApiLLM.HEADERS,
+     });
+     this.model =
+       modelPreference || process.env.AIML_MODEL_PREF || "gpt-3.5-turbo";
+     this.limits = {
+       history: this.promptWindowLimit() * 0.15,
+       system: this.promptWindowLimit() * 0.15,
+       user: this.promptWindowLimit() * 0.7,
+     };
+
+     if (!fs.existsSync(cacheFolder))
+       fs.mkdirSync(cacheFolder, { recursive: true });
+     this.cacheModelPath = path.resolve(cacheFolder, "models.json");
+     this.cacheAtPath = path.resolve(cacheFolder, ".cached_at");
+
+     this.embedder = embedder ?? new NativeEmbedder();
+     this.defaultTemp = 0.7;
+     this.log(
+       `Initialized ${this.model} with context window ${this.promptWindowLimit()}`
+     );
+   }
+
+   log(text, ...args) {
+     console.log(`\x1b[36m[${this.constructor.name}]\x1b[0m ${text}`, ...args);
+   }
+
+@@ -200,131 +200,129 @@ class AimlApiLLM {
+       messages,
+       false
+     );
+     return measuredStreamRequest;
+   }
+
+   handleStream(response, stream, responseProps) {
+     return handleDefaultStreamResponseV2(response, stream, responseProps);
+   }
+
+   async embedTextInput(textInput) {
+     return await this.embedder.embedTextInput(textInput);
+   }
+   async embedChunks(textChunks = []) {
+     return await this.embedder.embedChunks(textChunks);
+   }
+
+   async compressMessages(promptArgs = {}, rawHistory = []) {
+     const { messageArrayCompressor } = require("../../helpers/chat");
+     const messageArray = this.constructPrompt(promptArgs);
+     return await messageArrayCompressor(this, messageArray, rawHistory);
+   }
+ }
+
+ async function fetchAimlApiModels(providedApiKey = null) {
+-  const apiKey = providedApiKey || process.env.AIML_API_KEY || null;
+-  return await fetch(`${AIMLAPI_BASE_URL}/models`, {
++  const apiKey = providedApiKey || process.env.AIML_LLM_API_KEY || null;
++  return await fetch(`${AimlApiLLM.BASE_URL}/models`, {
+     method: "GET",
+     headers: {
+       "Content-Type": "application/json",
+       ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}),
+-      ...AIMLAPI_HEADERS,
++      ...AimlApiLLM.HEADERS,
+     },
+   })
+     .then((res) => res.json())
+     .then(({ data = [] }) => {
+       const models = {};
+       data
+         .filter((m) => m.type === "chat-completion")
+         .forEach((model) => {
+           const developer =
+             model.info?.developer ||
+             model.provider ||
+             model.id?.split("/")[0] ||
+             "AimlApi";
+           models[model.id] = {
+             id: model.id,
+             name: model.name || model.id,
+             developer: developer.charAt(0).toUpperCase() + developer.slice(1),
+             maxLength: model.context_length || model.max_tokens || 4096,
+           };
+         });
+
+       if (!fs.existsSync(cacheFolder))
+         fs.mkdirSync(cacheFolder, { recursive: true });
+       fs.writeFileSync(
+         path.resolve(cacheFolder, "models.json"),
+         JSON.stringify(models),
+         { encoding: "utf-8" }
+       );
+       fs.writeFileSync(
+         path.resolve(cacheFolder, ".cached_at"),
+         String(Number(new Date())),
+         { encoding: "utf-8" }
+       );
+
+       return models;
+     })
+     .catch((e) => {
+       console.error(e);
+       return {};
+     });
+ }
+
+ async function fetchAimlApiEmbeddingModels(providedApiKey = null) {
+-  const apiKey = providedApiKey || process.env.AIML_API_KEY || null;
+-  return await fetch(`${AIMLAPI_BASE_URL}/models`, {
++  const apiKey = providedApiKey || process.env.AIML_EMBEDDER_API_KEY || null;
++  return await fetch(`${AimlApiLLM.BASE_URL}/models`, {
+     method: "GET",
+     headers: {
+       "Content-Type": "application/json",
+       ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}),
+-      ...AIMLAPI_HEADERS,
++      ...AimlApiLLM.HEADERS,
+     },
+   })
+     .then((res) => res.json())
+     .then(({ data = [] }) => {
+       const models = {};
+       data
+         .filter((m) => m.type === "embedding")
+         .forEach((model) => {
+           const developer =
+             model.info?.developer ||
+             model.provider ||
+             model.id?.split("/")[0] ||
+             "AimlApi";
+           models[model.id] = {
+             id: model.id,
+             name: model.name || model.id,
+             developer: developer.charAt(0).toUpperCase() + developer.slice(1),
+             maxLength: model.context_length || model.max_tokens || 4096,
+           };
+         });
+
+       if (!fs.existsSync(embedCacheFolder))
+         fs.mkdirSync(embedCacheFolder, { recursive: true });
+       fs.writeFileSync(
+         path.resolve(embedCacheFolder, "models.json"),
+         JSON.stringify(models),
+         { encoding: "utf-8" }
+       );
+       fs.writeFileSync(
+         path.resolve(embedCacheFolder, ".cached_at"),
+         String(Number(new Date())),
+         { encoding: "utf-8" }
+       );
+
+       return models;
+     })
+     .catch((e) => {
+       console.error(e);
+       return {};
+     });
+ }
+
+ module.exports = {
+   AimlApiLLM,
+   fetchAimlApiModels,
+   fetchAimlApiEmbeddingModels,
+-  AIMLAPI_HEADERS,
+-  AIMLAPI_BASE_URL,
+ };
+diff --git a/server/utils/EmbeddingEngines/aimlapi/index.js b/server/utils/EmbeddingEngines/aimlapi/index.js
+index 55c4fd79101ac7a2df67de57403a343b5862ab93..4fb3f73d4779949e34ecd9d3ebce562b9f80b531 100644
+--- a/server/utils/EmbeddingEngines/aimlapi/index.js
++++ b/server/utils/EmbeddingEngines/aimlapi/index.js
+@@ -1,49 +1,49 @@
+ const { toChunks, maximumChunkLength } = require("../../helpers");
+ const {
+-  AIMLAPI_HEADERS,
+-  AIMLAPI_BASE_URL,
++  AimlApiLLM,
+   fetchAimlApiEmbeddingModels,
+ } = require("../../AiProviders/aimlapi");
+ const fs = require("fs");
+ const path = require("path");
+ const { safeJsonParse } = require("../../http");
+
+ const cacheFolder = path.resolve(
+   process.env.STORAGE_DIR
+     ? path.resolve(process.env.STORAGE_DIR, "models", "aimlapi", "embeddings")
+     : path.resolve(__dirname, `../../../storage/models/aimlapi/embeddings`)
+ );
+
+ class AimlApiEmbedder {
+   constructor() {
+-    if (!process.env.AIML_API_KEY) throw new Error("No AI/ML API key was set.");
++    if (!process.env.AIML_EMBEDDER_API_KEY)
++      throw new Error("No AI/ML API key was set.");
+     const { OpenAI: OpenAIApi } = require("openai");
+     this.openai = new OpenAIApi({
+-      apiKey: process.env.AIML_API_KEY,
+-      baseURL: AIMLAPI_BASE_URL,
+-      defaultHeaders: AIMLAPI_HEADERS,
++      apiKey: process.env.AIML_EMBEDDER_API_KEY,
++      baseURL: AimlApiLLM.BASE_URL,
++      defaultHeaders: AimlApiLLM.HEADERS,
+     });
+     this.model = process.env.EMBEDDING_MODEL_PREF || "text-embedding-ada-002";
+     if (!fs.existsSync(cacheFolder))
+       fs.mkdirSync(cacheFolder, { recursive: true });
+     this.cacheModelPath = path.resolve(cacheFolder, "models.json");
+     this.cacheAtPath = path.resolve(cacheFolder, ".cached_at");
+     this.maxConcurrentChunks = 500;
+     this.embeddingMaxChunkLength = maximumChunkLength();
+     this.log(`Initialized ${this.model}`);
+     this.#syncModels().catch((e) =>
+       this.log(`Failed to sync models: ${e.message}`)
+     );
+   }
+
+   log(text, ...args) {
+     console.log(`\x1b[36m[AimlApiEmbedder]\x1b[0m ${text}`, ...args);
+   }
+
+   #cacheIsStale() {
+     const MAX_STALE = 6.048e8; // 1 Week in MS
+     if (!fs.existsSync(this.cacheAtPath)) return true;
+     const now = Number(new Date());
+     const timestampMs = Number(fs.readFileSync(this.cacheAtPath));
+     return now - timestampMs > MAX_STALE;
+   }
+diff --git a/server/utils/agents/aibitat/providers/aimlapi.js b/server/utils/agents/aibitat/providers/aimlapi.js
+index ce15b819070d60673b06eccb12a059168f31f891..442eb80dd08e27609cb5aa90559af87d993682ac 100644
+--- a/server/utils/agents/aibitat/providers/aimlapi.js
++++ b/server/utils/agents/aibitat/providers/aimlapi.js
+@@ -1,89 +1,90 @@
+ const OpenAI = require("openai");
+-const {
+-  AIMLAPI_HEADERS,
+-  AIMLAPI_BASE_URL,
+-} = require("../../AiProviders/aimlapi");
++const { AimlApiLLM } = require("../../AiProviders/aimlapi");
+ const Provider = require("./ai-provider.js");
+-const InheritMultiple = require("./helpers/classes.js");
+-const UnTooled = require("./helpers/untooled.js");
++const { RetryError } = require("../error.js");
+
+-class AimlApiProvider extends InheritMultiple([Provider, UnTooled]) {
++
++class AimlApiProvider extends Provider {
+   model;
+
+   constructor(config = {}) {
+-    super();
+     const { model = "gpt-3.5-turbo" } = config;
+     const client = new OpenAI({
+-      baseURL: AIMLAPI_BASE_URL,
+-      apiKey: process.env.AIML_API_KEY ?? null,
++      baseURL: AimlApiLLM.BASE_URL,
++      apiKey: process.env.AIML_LLM_API_KEY ?? null,
+       maxRetries: 3,
+-      defaultHeaders: AIMLAPI_HEADERS,
++      defaultHeaders: AimlApiLLM.HEADERS,
+     });
++    super(client);
+
+-    this._client = client;
+     this.model = model;
+     this.verbose = true;
+   }
+
+-  get client() {
+-    return this._client;
+-  }
+-
+-  async #handleFunctionCallChat({ messages = [] }) {
+-    return await this.client.chat.completions
+-      .create({
++  async complete(messages, functions = []) {
++    try {
++      const response = await this.client.chat.completions.create({
+         model: this.model,
+-        temperature: 0,
+         messages,
+-      })
+-      .then((result) => {
+-        if (!result.hasOwnProperty("choices"))
+-          throw new Error("AimlApi chat: No results!");
+-        if (result.choices.length === 0)
+-          throw new Error("AimlApi chat: No results length!");
+-        return result.choices[0].message.content;
+-      })
+-      .catch(() => {
+-        return null;
++        ...(Array.isArray(functions) && functions.length > 0
++          ? { functions }
++          : {}),
+       });
+-  }
+
+-  async complete(messages, functions = []) {
+-    try {
+-      let completion;
+-      if (functions.length > 0) {
+-        const { toolCall, text } = await this.functionCall(
+-          messages,
+-          functions,
+-          this.#handleFunctionCallChat.bind(this)
+-        );
++      const completion = response.choices[0].message;
++      const cost = this.getCost(response.usage);
+
+-        if (toolCall !== null) {
+-          this.providerLog(`Valid tool call found - running ${toolCall.name}.`);
+-          this.deduplicator.trackRun(toolCall.name, toolCall.arguments);
+-          return {
+-            result: null,
+-            functionCall: {
+-              name: toolCall.name,
+-              arguments: toolCall.arguments,
+-            },
+-            cost: 0,
+-          };
++      if (completion.function_call) {
++        let functionArgs = {};
++        try {
++          functionArgs = JSON.parse(completion.function_call.arguments);
++        } catch (error) {
++          return this.complete(
++            [
++              ...messages,
++              {
++                role: "function",
++                name: completion.function_call.name,
++                function_call: completion.function_call,
++                content: error?.message,
++              },
++            ],
++            functions
++          );
+         }
+-        completion = { content: text };
+-      } else {
+-        completion = await this.client.chat.completions.create({
+-          model: this.model,
+-          messages,
+-        });
+-        completion = completion.choices[0];
++
++        return {
++          result: null,
++          functionCall: {
++            name: completion.function_call.name,
++            arguments: functionArgs,
++          },
++          cost,
++        };
++      }
++
++      return {
++        result: completion.content,
++        cost,
++      };
++    } catch (error) {
++      if (error instanceof OpenAI.AuthenticationError) throw error;
++
++      if (
++        error instanceof OpenAI.RateLimitError ||
++        error instanceof OpenAI.InternalServerError ||
++        error instanceof OpenAI.APIError
++      ) {
++        throw new RetryError(error.message);
+       }
+-      return { result: completion.content, cost: 0 };
+-    } catch (e) {
+-      this.providerLog(e.message);
+-      return { result: null, cost: 0 };
++
++      throw error;
+     }
+   }
++
++  getCost(_usage) {
++    return 0;
++  }
+ }
+
+ module.exports = AimlApiProvider;
+diff --git a/server/utils/agents/aibitat/providers/index.js b/server/utils/agents/aibitat/providers/index.js
+index d8c174862e4e7abe82f28a4a1e1483b1f27c6658..8ea5814e9c06cd4db10a64c20042e023d8674a19 100644
+--- a/server/utils/agents/aibitat/providers/index.js
++++ b/server/utils/agents/aibitat/providers/index.js
+@@ -1,53 +1,55 @@
+ const OpenAIProvider = require("./openai.js");
+ const AnthropicProvider = require("./anthropic.js");
+ const LMStudioProvider = require("./lmstudio.js");
+ const OllamaProvider = require("./ollama.js");
+ const GroqProvider = require("./groq.js");
+ const TogetherAIProvider = require("./togetherai.js");
+ const AzureOpenAiProvider = require("./azure.js");
+ const KoboldCPPProvider = require("./koboldcpp.js");
+ const LocalAIProvider = require("./localai.js");
+ const OpenRouterProvider = require("./openrouter.js");
+ const MistralProvider = require("./mistral.js");
+ const GenericOpenAiProvider = require("./genericOpenAi.js");
+ const PerplexityProvider = require("./perplexity.js");
+ const TextWebGenUiProvider = require("./textgenwebui.js");
+ const AWSBedrockProvider = require("./bedrock.js");
+ const FireworksAIProvider = require("./fireworksai.js");
+ const DeepSeekProvider = require("./deepseek.js");
+ const LiteLLMProvider = require("./litellm.js");
+ const ApiPieProvider = require("./apipie.js");
+ const XAIProvider = require("./xai.js");
+ const NovitaProvider = require("./novita.js");
+ const NvidiaNimProvider = require("./nvidiaNim.js");
+ const PPIOProvider = require("./ppio.js");
+ const GeminiProvider = require("./gemini.js");
+ const DellProAiStudioProvider = require("./dellProAiStudio.js");
++const AimlApiProvider = require("./aimlapi.js");
+
+ module.exports = {
+   OpenAIProvider,
+   AnthropicProvider,
+   LMStudioProvider,
+   OllamaProvider,
+   GroqProvider,
+   TogetherAIProvider,
+   AzureOpenAiProvider,
+   KoboldCPPProvider,
+   LocalAIProvider,
+   OpenRouterProvider,
+   MistralProvider,
+   GenericOpenAiProvider,
+   DeepSeekProvider,
+   PerplexityProvider,
+   TextWebGenUiProvider,
+   AWSBedrockProvider,
+   FireworksAIProvider,
+   LiteLLMProvider,
+   ApiPieProvider,
+   XAIProvider,
+   NovitaProvider,
+   NvidiaNimProvider,
+   PPIOProvider,
+   GeminiProvider,
+   DellProAiStudioProvider,
++  AimlApiProvider,
+ };
+diff --git a/server/utils/agents/index.js b/server/utils/agents/index.js
+index 913bf9cf30440325c76b795067fdc0b1cd0ccb68..6884a93ef5c4cbf4701baa3a847a6ad2c81d33f9 100644
+--- a/server/utils/agents/index.js
++++ b/server/utils/agents/index.js
+@@ -164,51 +164,51 @@ class AgentHandler {
+           );
+         break;
+       case "apipie":
+         if (!process.env.APIPIE_LLM_API_KEY)
+           throw new Error("ApiPie API Key must be provided to use agents.");
+         break;
+       case "xai":
+         if (!process.env.XAI_LLM_API_KEY)
+           throw new Error("xAI API Key must be provided to use agents.");
+         break;
+       case "novita":
+         if (!process.env.NOVITA_LLM_API_KEY)
+           throw new Error("Novita API Key must be provided to use agents.");
+         break;
+       case "nvidia-nim":
+         if (!process.env.NVIDIA_NIM_LLM_BASE_PATH)
+           throw new Error(
+             "NVIDIA NIM base path must be provided to use agents."
+           );
+         break;
+       case "ppio":
+         if (!process.env.PPIO_API_KEY)
+           throw new Error("PPIO API Key must be provided to use agents.");
+         break;
+       case "aimlapi":
+-        if (!process.env.AIML_API_KEY)
++        if (!process.env.AIML_LLM_API_KEY)
+           throw new Error("AI/ML API key must be provided to use agents.");
+         break;
+       case "gemini":
+         if (!process.env.GEMINI_API_KEY)
+           throw new Error("Gemini API key must be provided to use agents.");
+         break;
+       case "dpais":
+         if (!process.env.DPAIS_LLM_BASE_PATH)
+           throw new Error(
+             "Dell Pro AI Studio base path must be provided to use agents."
+           );
+         if (!process.env.DPAIS_LLM_MODEL_PREF)
+           throw new Error(
+             "Dell Pro AI Studio model must be set to use agents."
+           );
+         break;
+
+       default:
+         throw new Error(
+           "No workspace agent provider set. Please set your agent provider in the workspace's settings"
+         );
+     }
+   }
+
+   /**
+diff --git a/server/utils/helpers/customModels.js b/server/utils/helpers/customModels.js
+index cabfffba8a19214d071c7c24fe254e14847ca55e..01b54b9e371bb3e9c00d35d4a8ee2761c90cc774 100644
+--- a/server/utils/helpers/customModels.js
++++ b/server/utils/helpers/customModels.js
+@@ -669,60 +669,60 @@ async function getDellProAiStudioModels(basePath = null) {
+               id: model.id,
+               name: model.name,
+               organization: model.owned_by,
+             };
+           });
+       })
+       .catch((e) => {
+         throw new Error(e.message);
+       });
+     return { models, error: null };
+   } catch (e) {
+     console.error(`getDellProAiStudioModels`, e.message);
+     return {
+       models: [],
+       error: "Could not reach Dell Pro Ai Studio from the provided base path",
+     };
+   }
+ }
+
+ async function getAimlApiModels(apiKey = null) {
+   const knownModels = await fetchAimlApiModels(apiKey);
+   if (!Object.keys(knownModels).length === 0)
+     return { models: [], error: null };
+
+   if (Object.keys(knownModels).length > 0 && !!apiKey)
+-    process.env.AIML_API_KEY = apiKey;
++    process.env.AIML_LLM_API_KEY = apiKey;
+
+   const models = Object.values(knownModels).map((model) => {
+     return {
+       id: model.id,
+       organization: model.developer,
+       name: model.name,
+     };
+   });
+   return { models, error: null };
+ }
+
+ async function getAimlApiEmbeddingModels(apiKey = null) {
+   const knownModels = await fetchAimlApiEmbeddingModels(apiKey);
+   if (!Object.keys(knownModels).length === 0)
+     return { models: [], error: null };
+
+   if (Object.keys(knownModels).length > 0 && !!apiKey)
+-    process.env.AIML_API_KEY = apiKey;
++    process.env.AIML_EMBEDDER_API_KEY = apiKey;
+
+   const models = Object.values(knownModels).map((model) => {
+     return {
+       id: model.id,
+       organization: model.developer,
+       name: model.name,
+     };
+   });
+   return { models, error: null };
+ }
+
+ module.exports = {
+   getCustomModels,
+   getAimlApiModels,
+   getAimlApiEmbeddingModels,
+ };
+diff --git a/server/utils/helpers/updateENV.js b/server/utils/helpers/updateENV.js
+index 39f3d22a73252c88c86375d9f4e851477ab4d4cc..b34cb3f9c4dd04bf8fa0efeb774904da974fc6a7 100644
+--- a/server/utils/helpers/updateENV.js
++++ b/server/utils/helpers/updateENV.js
+@@ -182,52 +182,52 @@ const KEY_MAPPING = {
+   },
+   TextGenWebUIAPIKey: {
+     envKey: "TEXT_GEN_WEB_UI_API_KEY",
+     checks: [],
+   },
+
+   // LiteLLM Settings
+   LiteLLMModelPref: {
+     envKey: "LITE_LLM_MODEL_PREF",
+     checks: [isNotEmpty],
+   },
+   LiteLLMTokenLimit: {
+     envKey: "LITE_LLM_MODEL_TOKEN_LIMIT",
+     checks: [nonZero],
+   },
+   LiteLLMBasePath: {
+     envKey: "LITE_LLM_BASE_PATH",
+     checks: [isValidURL],
+   },
+   LiteLLMApiKey: {
+     envKey: "LITE_LLM_API_KEY",
+     checks: [],
+   },
+
+   // AI/ML API Options
+-  AimlApiKey: {
+-    envKey: "AIML_API_KEY",
++  AimlLlmApiKey: {
++    envKey: "AIML_LLM_API_KEY",
+     checks: [isNotEmpty],
+   },
+   AimlModelPref: {
+     envKey: "AIML_MODEL_PREF",
+     checks: [isNotEmpty],
+   },
+
+   // Generic OpenAI InferenceSettings
+   GenericOpenAiBasePath: {
+     envKey: "GENERIC_OPEN_AI_BASE_PATH",
+     checks: [isValidURL],
+   },
+   GenericOpenAiModelPref: {
+     envKey: "GENERIC_OPEN_AI_MODEL_PREF",
+     checks: [isNotEmpty],
+   },
+   GenericOpenAiTokenLimit: {
+     envKey: "GENERIC_OPEN_AI_MODEL_TOKEN_LIMIT",
+     checks: [nonZero],
+   },
+   GenericOpenAiKey: {
+     envKey: "GENERIC_OPEN_AI_API_KEY",
+     checks: [],
+   },
+   GenericOpenAiMaxTokens: {
+@@ -299,50 +299,55 @@ const KEY_MAPPING = {
+     envKey: "EMBEDDING_MODEL_PREF",
+     checks: [isNotEmpty],
+     postUpdate: [handleVectorStoreReset],
+   },
+   EmbeddingModelMaxChunkLength: {
+     envKey: "EMBEDDING_MODEL_MAX_CHUNK_LENGTH",
+     checks: [nonZero],
+   },
+
+   // Gemini Embedding Settings
+   GeminiEmbeddingApiKey: {
+     envKey: "GEMINI_EMBEDDING_API_KEY",
+     checks: [isNotEmpty],
+   },
+
+   // Generic OpenAI Embedding Settings
+   GenericOpenAiEmbeddingApiKey: {
+     envKey: "GENERIC_OPEN_AI_EMBEDDING_API_KEY",
+     checks: [],
+   },
+   GenericOpenAiEmbeddingMaxConcurrentChunks: {
+     envKey: "GENERIC_OPEN_AI_EMBEDDING_MAX_CONCURRENT_CHUNKS",
+     checks: [nonZero],
+   },
+
++  AimlEmbedderApiKey: {
++    envKey: "AIML_EMBEDDER_API_KEY",
++    checks: [isNotEmpty],
++  },
++
+   // Vector Database Selection Settings
+   VectorDB: {
+     envKey: "VECTOR_DB",
+     checks: [isNotEmpty, supportedVectorDB],
+     postUpdate: [handleVectorStoreReset],
+   },
+
+   // Chroma Options
+   ChromaEndpoint: {
+     envKey: "CHROMA_ENDPOINT",
+     checks: [isValidURL, validChromaURL, validDockerizedUrl],
+   },
+   ChromaApiHeader: {
+     envKey: "CHROMA_API_HEADER",
+     checks: [],
+   },
+   ChromaApiKey: {
+     envKey: "CHROMA_API_KEY",
+     checks: [],
+   },
+
+   // Weaviate Options
+   WeaviateEndpoint: {
+     envKey: "WEAVIATE_ENDPOINT",
+     checks: [isValidURL, validDockerizedUrl],
